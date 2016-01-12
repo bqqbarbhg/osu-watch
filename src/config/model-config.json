@@ -1,0 +1,9 @@
+{
+  "_meta": {
+    "sources": [
+      "loopback/server/models",
+      "../common/models",
+      "../models"
+    ]
+  }
+}

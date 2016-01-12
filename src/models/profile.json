@@ -1,0 +1,26 @@
+{
+  "name": "Profile",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "properties": {
+    "id": {
+      "type": "number",
+      "id": true,
+      "generated": true
+    },
+    "created": {
+      "type": "date",
+      "required": true,
+      "postgresql": {
+        "dataType": "timestamp"
+      }
+    },
+  },
+  "relations": {
+    "userAgent": {
+      "type": "belongsTo",
+      "model": "UserAgent",
+      "foreignKey": "userAgentId"
+    }
+  }
+}
