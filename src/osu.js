@@ -23,6 +23,8 @@ const OSU_USER_API_REQUEST_RATE_TIME = 30; // seconds
 module.exports = function (apiKey)
 {
 
+	var delay = time => new Promise(resolve => setTimeout(resolve, time));
+
 	function getDomContext(url)
 	{
 		return new Promise((resolve, reject) => {
@@ -56,22 +58,19 @@ module.exports = function (apiKey)
 	function getCountryScoreboard (country, page, mode)
 	{
 		mode = mode || OSU_GAMEMODES.STD;
-		return new Promise((resolve, reject) => {
-			let url = countryScoreboardUrl(country, page, mode);
-			getDomContext(url).then(context => {
+		let url = countryScoreboardUrl(country, page, mode);
+		
+		return getDomContext(url).then(context => {
+			let rows = context.document.querySelectorAll('.beatmapListing tr[onclick]');
+			let ids = [];
 
-				let rows = context.document.querySelectorAll('.beatmapListing tr[onclick]');
-				let ids = [];
+			_.each(rows, row => {
+				let matches = row.getAttribute('onclick').match(/document.location=\"\/u\/(\d+)\"/);
+				ids.push(parseInt(matches[1]));
+			});
 
-				_.each(rows, row => {
-					let matches = row.getAttribute('onclick').match(/document.location=\"\/u\/(\d+)\"/);
-					ids.push(parseInt(matches[1]));
-				});
-
-				context.close();
-				resolve(ids);
-
-			}).catch(reject);
+			context.close();
+			return ids;
 		});
 	}
 
@@ -87,27 +86,16 @@ module.exports = function (apiKey)
 
 			// check if the oldest timestamps is older than one minute
 			if(moment(userRequestHistory[0]).add(OSU_USER_API_REQUEST_RATE_TIME, 's').isBefore(now)) {
-
-				// filter out the timestamps older than one minute
+				// filter out the timestamps older than one minute and continue as usual.
 				userRequestHistory = userRequestHistory.filter(ts => moment(ts).add(OSU_USER_API_REQUEST_RATE_TIME, 's').isBefore(now));
-				// ... and continue as usual.
-
 			} else {
-
 				// throttle the request.
-				return new Promise((resolve, reject) => {
-					setTimeout(() => {
-						getProfile (id, mode, apiOnly).then(resolve).catch(reject);
-					}, now.getTime() - userRequestHistory[0].getTime());
-				});
+				return delay(now.getTime() - userRequestHistory[0].getTime())
+					.then(() => getProfile(id, mode, apiOnly));
 			}
 		}
-
 		userRequestHistory.push(now);
-
-		return new Promise((resolve, reject) => {
-			fetch(getUserApiUrl(id, mode)).then(response => response.json()).then(resolve).catch(reject);
-		});
+		return fetch(getUserApiUrl(id, mode)).then(response => response.json());
 	}
 
 	function getBeatmap (id)
